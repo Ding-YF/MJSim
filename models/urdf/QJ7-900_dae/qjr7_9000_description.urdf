@@ -1,0 +1,114 @@
+<robot name="qjr7_9000">
+    <link name="base_link">
+        <visual>
+            <geometry>
+                <mesh filename="package://QJ7-900_dae/meshes/base_link.dae"/>
+            </geometry>
+        </visual>
+    </link>
+    <link name="link1">
+        <visual>
+            <origin xyz="0 0 -0.19"/>
+            <geometry>
+                <mesh filename="package://QJ7-900_dae/meshes/link1.dae"/>
+            </geometry>
+        </visual>
+    </link>
+
+    <joint name="joint1" type="revolute">
+        <parent link="base_link"/>
+        <child link="link1"/>
+        <origin xyz="0 0 0.19" rpy="0 0 0"/>
+        <axis xyz="0 0 1" />
+        <limit lower="-3.141592653589793" upper="3.141592653589793" effort="100" velocity="5.6" />
+    </joint>
+
+    <link name="link2">
+        <visual>
+            <origin xyz="-0.05 0 -0.37" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://QJ7-900_dae/meshes/link2.dae"/>
+            </geometry>
+        </visual>
+    </link>
+    <joint name="joint2" type="revolute">
+        <parent link="link1"/>
+        <child link="link2"/>
+        <origin xyz="0.05 0 0.18" rpy="0 0 0"/>
+        <axis xyz="0 1 0" />
+        <limit lower="-1.6406094968746698" upper="2.3038346126325147" effort="100" velocity="4.5" />
+    </joint>
+
+    <link name="link3">
+        <visual>
+            <origin xyz="-0.05 0 -0.79"/>
+            <geometry>
+                <mesh filename="package://QJ7-900_dae/meshes/link3.dae"/>
+            </geometry>
+        </visual>
+    </link>
+    <joint name="joint3" type="revolute">
+        <parent link="link2"/>
+        <child link="link3"/>
+        <origin xyz="0 0 0.42" rpy="0 0 0"/>
+        <axis xyz="0 1 0" />
+        <limit lower="-3.2637657012293966" upper="1.2915436464758039" effort="100" velocity="7" />
+    </joint>
+
+    <link name="link4">
+        <visual>
+            <origin xyz="-0.29 0 -0.845"/>
+            <geometry>
+                <mesh filename="package://QJ7-900_dae/meshes/link4.dae"/>
+            </geometry>
+        </visual>
+    </link>
+    <joint name="joint4" type="revolute">
+        <parent link="link3"/>
+        <child link="link4"/>
+        <origin xyz="0.24 0 0.055" rpy="0 0 0"/>
+        <axis xyz="1 0 0" />
+        <limit lower="-3.001966313430247" upper="3.001966313430247" effort="33.6" velocity="7.5" />
+    </joint>
+
+    <link name="link5">
+        <visual>
+            <origin xyz="-0.48 0 -0.845"/>
+            <geometry>
+                <mesh filename="package://QJ7-900_dae/meshes/link5.dae"/>
+            </geometry>
+        </visual>
+    </link>
+    <joint name="joint5" type="revolute">
+        <parent link="link4"/>
+        <child link="link5"/>
+        <origin xyz="0.19 0 0" rpy="0 0 0"/>
+        <axis xyz="0 1 0" />
+        <limit lower="-2.1816615649929116" upper="2.1816615649929116" effort="18.4" velocity="7.5" />
+    </joint>
+
+    <link name="link6">
+        <visual>
+            <origin xyz="-0.5755 0 -0.845"/>
+            <geometry>
+                <mesh filename="package://QJ7-900_dae/meshes/link6.dae"/>
+            </geometry>
+        </visual>
+    </link>
+    <joint name="joint6" type="revolute">
+        <parent link="link5"/>
+        <child link="link6"/>
+        <origin xyz="0.0955 0 0" rpy="0 0 0"/>
+        <axis xyz="1 0 0" />
+        <limit lower="-3.1415926" upper="3.1415926" effort="15.8" velocity="12" />
+    </joint>
+
+    <link name="tool0">
+    </link>
+
+    <joint name="link6_to_tool0" type="fixed">
+        <parent link="link6"></parent>
+        <child link="tool0"></child>
+        <origin xyz="0.1 0 0" rpy="3.141592653589793 -1.5707963267948966 0"></origin>
+    </joint>
+</robot>

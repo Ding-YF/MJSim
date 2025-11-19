@@ -1,0 +1,140 @@
+<robot
+  name="er12h-1600">
+
+  <!-- 材料定义 -->
+  <material name="gray">
+    <color rgba="0.4 0.4 0.4 1" />
+  </material>
+
+  <!-- 基础连杆 -->
+  <link name="base">
+    <visual>
+      <origin rpy="0 0 3.1415926"></origin>
+      <geometry>
+        <mesh filename="meshes/base_link.stl" />
+      </geometry>
+      <material name="gray" />
+    </visual>
+  </link>
+
+  <!-- 连杆1 -->
+  <link name="link1">
+    <visual>
+      <origin rpy="0 0 3.1415926"></origin>
+      <geometry>
+        <mesh filename="meshes/link_1.stl" />
+      </geometry>
+      <material name="gray" />
+    </visual>
+  </link>
+
+  <!-- 关节1: base -> link1 -->
+  <joint name="joint1" type="revolute">
+    <parent link="base" />
+    <child link="link1" />
+    <origin xyz="0 0 0.437" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+    <limit lower="-2.96706" upper="2.96706" effort="1000" velocity="1000" />
+  </joint>
+
+  <!-- 连杆2 -->
+  <link name="link2">
+    <visual>
+      <origin rpy="0 0 3.1415926"></origin>
+      <geometry>
+        <mesh filename="meshes/link_2.stl" />
+      </geometry>
+      <material name="gray" />
+    </visual>
+  </link>
+
+  <!-- 关节2: link1 -> link2 -->
+  <joint name="joint2" type="revolute">
+    <parent link="link1" />
+    <child link="link2" />
+    <origin xyz="0.180 0 0" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <limit lower="-2.0944" upper="2.0944" effort="1000" velocity="1000" />
+  </joint>
+
+  <!-- 连杆3 -->
+  <link name="link3">
+    <visual>
+      <origin rpy="0 0 3.1415926"></origin>
+      <geometry>
+        <mesh filename="meshes/link_3.stl" />
+      </geometry>
+      <material name="gray" />
+    </visual>
+  </link>
+
+  <!-- 关节3: link2 -> link3 -->
+  <joint name="joint3" type="revolute">
+    <parent link="link2" />
+    <child link="link3" />
+    <origin xyz="0 0 0.570" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <limit lower="-3.05433" upper="3.05433" effort="1000" velocity="1000" />
+  </joint>
+
+  <!-- 连杆4 -->
+  <link name="link4">
+    <visual>
+      <origin rpy="0 0 3.1415926"></origin>
+      <geometry>
+        <mesh filename="meshes/link_4.stl" />
+      </geometry>
+      <material name="gray" />
+    </visual>
+  </link>
+
+  <!-- 关节4: link3 -> link4 -->
+  <joint name="joint4" type="revolute">
+    <parent link="link3" />
+    <child link="link4" />
+    <origin xyz="0.830 0 0.205" rpy="0 0 0" />
+    <axis xyz="-1 0 0" />
+    <limit lower="-2.0944" upper="2.0944" effort="1000" velocity="1000" />
+  </joint>
+
+  <!-- 连杆5 -->
+  <link name="link5">
+    <visual>
+      <origin rpy="0 0 3.1415926"></origin>
+      <geometry>
+        <mesh filename="meshes/link_5.stl" />
+      </geometry>
+      <material name="gray" />
+    </visual>
+  </link>
+
+  <!-- 关节5: link4 -> link5 -->
+  <joint name="joint5" type="revolute">
+    <parent link="link4" />
+    <child link="link5" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <limit lower="-2.96706" upper="2.96706" effort="1000" velocity="1000" />
+  </joint>
+
+  <!-- 连杆6 -->
+  <link name="link6">
+    <visual>
+      <origin rpy="0 0 3.1415926"></origin>
+      <geometry>
+        <mesh filename="meshes/link_6.stl" />
+      </geometry>
+      <material name="gray" />
+    </visual>
+  </link>
+
+  <!-- 关节6: link5 -> link6 -->
+  <joint name="joint6" type="revolute">
+    <parent link="link5" />
+    <child link="link6" />
+    <origin xyz="0.075 0 0" rpy="0 0 0" />
+    <axis xyz="-1 0 0" />
+    <limit lower="-3.05433" upper="3.05433" effort="1000" velocity="1000" />
+  </joint>
+
+</robot>

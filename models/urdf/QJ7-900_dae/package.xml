@@ -1,0 +1,14 @@
+<package format="3">
+    <name>qjr7_9000_description</name>
+    <version>0.0.1</version>
+    <description>
+        URDF description for qjr7-9000
+    </description>
+
+    <maintainer email="zhangtg@hitrobotgroup.com">zhangtg</maintainer>
+    <license>BSD-3-Clause</license>
+    <buildtool_depend>ament_cmake</buildtool_depend>
+    <export>
+        <build_type>ament_cmake</build_type>
+    </export>
+</package>
