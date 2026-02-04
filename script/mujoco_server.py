@@ -50,4 +50,4 @@ with mujoco.viewer.launch_passive(model,data) as viewer:
         sock.send_string("ACK")
 
         # 5. 刷新画面
-        viewer.sync()
+        viewer.sync(

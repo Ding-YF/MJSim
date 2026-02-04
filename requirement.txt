@@ -1,0 +1,7 @@
+numpy
+mujoco
+pyzmq
+msgpack
+msgpack-numpy
+opencv-python
+tyro
