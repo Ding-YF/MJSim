@@ -19,6 +19,28 @@ msgpack_numpy.patch()
 # User Request: Joint4 = -45 deg, Joint6 = 60 deg
 DEFAULT_INIT_POSE = np.array([0, 0, 0, np.deg2rad(-45), 0, np.deg2rad(60), 0])
 
+@dataclass
+class SimulationConfig:
+    """MuJoCo Simulator with OpenPI Policy Client"""
+    
+    server: str = "tcp://localhost:5555"
+    """Policy server address"""
+    
+    preview: bool = False
+    """Enable camera preview windows (requires OpenCV)"""
+    
+    preview_fps: int = 15
+    """Camera preview frame rate"""
+    
+    model: str = "../models/mjcf/franka_emika_panda/scene.xml"
+    """Path to MuJoCo model XML file"""
+    
+    sim_dt: float = 0.002
+    """Simulation timestep in seconds (default: 0.002s / 500Hz)"""
+
+    prompt: str = "Pick up the cube and then place it in the box."
+    """Task description prompt"""
+
 class ZMQPolicyClient:
     """
     封装 ZMQ 通信细节，连接管理和静默重连
@@ -152,13 +174,15 @@ class AsyncActionBroker:
         self, 
         server_addr: str,
         silent_mode: bool = True,
-        reconnect_interval_s: float = 3.0
+        reconnect_interval_s: float = 3.0,
+        action_watermark: int = 25
     ):
         self.client = ZMQPolicyClient(
             server_addr=server_addr,
             silent_mode=silent_mode,
             reconnect_interval_s=reconnect_interval_s
         )
+        self.action_watermark = action_watermark
         self.queue = deque()
         self.lock = threading.Lock()
         
@@ -222,9 +246,9 @@ class AsyncActionBroker:
         with self.lock:
             q_len = len(self.queue)
         
-        if q_len == 0 and not self.request_event.is_set():
+        if q_len <= self.action_watermark and not self.request_event.is_set():
             # 获取观测
-            print("[Broker] Queue empty, capturing observation...")
+            # print(f"[Broker] Queue low ({q_len} <= {self.action_watermark}), capturing observation...")
             obs = obs_callback()
             self.current_obs = obs
             self.request_event.set() # 唤醒后台线程
@@ -273,15 +297,20 @@ def run_simulation(config: SimulationConfig):
         img_hand = renderer_hand.render()
         
         # B. 状态
-        qpos = data.qpos[:7].astype(np.float32)
-        qvel = data.qvel[:7].astype(np.float32)
+        # qpos[:7] contains 7 arm joints. qpos[7], qpos[8] are gripper fingers (0-0.04m).
+        qpos_arm = data.qpos[:7].astype(np.float32)
+        gripper_width = data.qpos[7] + data.qpos[8]
+        gripper_state = gripper_width / 0.08 # Normalize 0-1 (1=Open)
+        
+        # 适配 Pi05 DROID 的输入格式
+        # DROID policy 期望特定的键名：observation/joint_position, observation/gripper_position 等
         
         return {
-            "state": np.concatenate([qpos, qvel]),
-            "images": {
-                "cam_high": img_scene,      # 环境相机（主视角）
-                "cam_wrist": img_hand        # 手腕相机
-            }
+            "observation/joint_position": qpos_arm,  # 7 DoF Arm
+            "observation/gripper_position": np.array([gripper_state], dtype=np.float32), # 1 dim
+            "observation/exterior_image_1_left": img_scene, # 环境相机
+            "observation/wrist_image_left": img_hand,       # 手腕相机
+            "prompt": config.prompt
         }
 
     # 5. 相机预览设置, 可在run_simulation参数中控制
@@ -318,6 +347,8 @@ def run_simulation(config: SimulationConfig):
     current_action = np.zeros(model.nu) 
     current_action[:7] = DEFAULT_INIT_POSE
     
+    input("[Note] Press any key to start simulation...\n")
+    
     print("[Sim] Starting simulation loop... Press Ctrl+C to stop.")
     print("[Sim] Physics simulation is running, control will activate when server connects.")
     if preview_enabled:
@@ -343,13 +374,20 @@ def run_simulation(config: SimulationConfig):
                 
                 if next_action is not None:
                     # 有新动作，更新控制
-                    dim = min(len(next_action), len(current_action))
-                    current_action[:dim] = next_action[:dim]
-                else:
-                    # 没有新动作时，不更新current_action，则为保持上一个动作
-                    # 无论是未连接还是队列为空，都维持当前控制量，避免突然归零导致掉落
-                    pass
-
+                    # 假定 Action 是 [J1...J7, Gripper]
+                    
+                    # 取前7个维度作为关节控制 (Panda是7轴)
+                    n_joints = 7
+                    if len(next_action) >= n_joints:
+                         current_action[:n_joints] = next_action[:n_joints]
+                    
+                    # 处理夹爪 (最后一个维度)
+                    g_cmd = next_action[-1]
+                    g_val = 255.0 if g_cmd > 0.5 else 0.0
+                    
+                    # Apply to all remaining actuators (assuming they are gripper)
+                    for i in range(n_joints, model.nu):
+                        current_action[i] = g_val
                 
                 # --- 物理执行 ---
                 data.ctrl[:] = current_action
@@ -390,26 +428,6 @@ def run_simulation(config: SimulationConfig):
         broker.stop()
         if preview_enabled:
             cv2.destroyAllWindows()
-
-@dataclass
-class SimulationConfig:
-    """MuJoCo Simulator with OpenPI Policy Client"""
-    
-    server: str = "tcp://localhost:5555"
-    """Policy server address"""
-    
-    preview: bool = False
-    """Enable camera preview windows (requires OpenCV)"""
-    
-    preview_fps: int = 15
-    """Camera preview frame rate"""
-    
-    model: str = "../models/mjcf/franka_emika_panda/scene.xml"
-    """Path to MuJoCo model XML file"""
-    
-    sim_dt: float = 0.002
-    """Simulation timestep in seconds (default: 0.002s / 500Hz)"""
-
 
 if __name__ == "__main__":
     run_simulation(tyro.cli(SimulationConfig))
