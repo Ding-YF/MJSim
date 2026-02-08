@@ -25,12 +25,11 @@
       <geom name="cube" type="box" size="0.025 0.025 0.025" rgba="0.8 0.2 0.2 1" mass="0.05"/>
       <joint type="free"/>
     </body>
-    
-    <!-- 环境相机：右前方45度，距离30cm，向下45度俯视 -->
+
     <camera name="scene_camera" 
-            pos="0.212 -0.212 0.55" 
-            euler="0.785 0 -0.785"
-            fovy="50"
-            resolution="640 480"/>
+              pos="0.6 -1 1.2" 
+              euler = "0.785 0 0"
+              fovy="50"
+              resolution="640 480"/>
   </worldbody>
 </mujoco>
