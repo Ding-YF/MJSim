@@ -6,14 +6,39 @@ import mujoco
 import mujoco.viewer
 import zmq
 import msgpack
-import msgpack_numpy
 from collections import deque
 import cv2
 import tyro
 from dataclasses import dataclass
 
-# Patch msgpack to use numpy serialization
-msgpack_numpy.patch()
+# --- Custom msgpack-numpy packer consistent with openpi-client ---
+def pack_array(obj):
+    """
+    Serializes numpy arrays to the format expected by openpi-client.
+    Compatible with: openpi_client/msgpack_numpy.py
+    """
+    if isinstance(obj, np.ndarray):
+        # Unsupported dtypes for this simple packer
+        if obj.dtype.kind in ("V", "O", "c"):
+            raise ValueError(f"Unsupported dtype: {obj.dtype}")
+            
+        return {
+            b"__ndarray__": True,
+            b"data": obj.tobytes(),
+            b"dtype": obj.dtype.str,
+            b"shape": obj.shape,
+        }
+
+    if isinstance(obj, np.generic):
+        return {
+            b"__npgeneric__": True,
+            b"data": obj.item(),
+            b"dtype": obj.dtype.str,
+        }
+
+    return obj
+
+# --- End Custom Packer ---
 
 # 全局定义的初始位姿 (Joint1 - Joint7)
 # User Request: Joint4 = -45 deg, Joint6 = 60 deg
@@ -26,20 +51,21 @@ class SimulationConfig:
     server: str = "tcp://localhost:5555"
     """Policy server address"""
     
-    preview: bool = False
+    preview: bool = True
     """Enable camera preview windows (requires OpenCV)"""
     
-    preview_fps: int = 15
+    preview_fps: int = 30
     """Camera preview frame rate"""
     
     model: str = "../models/mjcf/franka_emika_panda/scene.xml"
     """Path to MuJoCo model XML file"""
     
-    sim_dt: float = 0.002
-    """Simulation timestep in seconds (default: 0.002s / 500Hz)"""
+    sim_dt: float = 0.001
+    """Simulation timestep in seconds (default: 0.001s / 1000Hz)"""
 
-    prompt: str = "Pick up the cube and then place it in the box."
+    prompt: str = "Pick up the red cube."
     """Task description prompt"""
+    "Pick up the cube and then place it in the box."
 
 class ZMQPolicyClient:
     """
@@ -137,16 +163,39 @@ class ZMQPolicyClient:
                 return np.array([])
             
         try:
-            self.socket.send(msgpack.packb(obs))
+            # Use custom default packer for numpy arrays
+            self.socket.send(msgpack.packb(obs, default=pack_array, use_bin_type=True))
+            
+            # Still use standard unpack for receiving (assuming server sends standard msgpack or simple structures)
+            # If server sends back custom packed numpy arrays, we might need a custom unpacker too.
+            # But usually actions are simple lists or standard arrays which msgpack might handle or we can decode manually if needed.
+            # For now, let's try raw unpack and see what we get.
             result = msgpack.unpackb(self.socket.recv())
             
             if "actions" in result:
-                # 确保返回的是 numpy 数组
-                actions = np.array(result["actions"])
-                # 如果是 (Batch, Time, Dim) 这种 3D 数组 (Batch=1)，降维
-                if actions.ndim == 3 and actions.shape[0] == 1:
-                    actions = actions[0]
-                return actions
+                # 检查 actions 是否是编码后的 numpy 格式 (server using openpi_client.msgpack_numpy)
+                # openpi_client packer uses b"__ndarray__": True
+                raw_actions = result["actions"]
+                actions = None
+                
+                # Manual unpack of numpy array if needed
+                if isinstance(raw_actions, dict) and b"__ndarray__" in raw_actions:
+                    actions = np.ndarray(
+                        buffer=raw_actions[b"data"], 
+                        dtype=np.dtype(raw_actions[b"dtype"]), 
+                        shape=raw_actions[b"shape"]
+                    )
+                elif isinstance(raw_actions, (list, tuple)):
+                    actions = np.array(raw_actions)
+                elif isinstance(raw_actions, np.ndarray):
+                    actions = raw_actions
+                    
+                if actions is not None:
+                     # 如果是 (Batch, Time, Dim) 这种 3D 数组 (Batch=1)，降维
+                    if actions.ndim == 3 and actions.shape[0] == 1:
+                        actions = actions[0]
+                    return actions
+            
             return np.array([])
             
         except zmq.Again:
@@ -175,7 +224,7 @@ class AsyncActionBroker:
         server_addr: str,
         silent_mode: bool = True,
         reconnect_interval_s: float = 3.0,
-        action_watermark: int = 25
+        action_watermark: int = 5
     ):
         self.client = ZMQPolicyClient(
             server_addr=server_addr,
